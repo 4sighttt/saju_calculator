@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>사주 팔자 계산기</title>
+  <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.7.7/lunar.js"></script>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #141b34;
+      --panel-2: #1b2445;
+      --text: #eef2ff;
+      --muted: #a9b3d1;
+      --line: #2d3a6a;
+      --accent: #8ab4ff;
+      --ok: #71d49c;
+      --bad: #ff8a8a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      background: linear-gradient(180deg, #0a0f1f 0%, #111831 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 24px; }
+    .title h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: -0.03em; }
+    .title p { margin: 0; color: var(--muted); line-height: 1.65; }
+    .grid { display: grid; grid-template-columns: 1.02fr 0.98fr; gap: 18px; margin-top: 18px; }
+    .card {
+      background: rgba(20, 27, 52, 0.9);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+      backdrop-filter: blur(6px);
+    }
+    .card h2 { margin: 0 0 14px; font-size: 18px; }
+    .row, .row-3, .row-5 { display: grid; gap: 12px; margin-bottom: 12px; }
+    .row { grid-template-columns: 1fr 1fr; }
+    .row-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .row-5 { grid-template-columns: repeat(5, 1fr); }
+    label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+    input, select, button, textarea {
+      width: 100%; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2);
+      color: var(--text); padding: 12px 14px; font-size: 15px; outline: none;
+    }
+    textarea { min-height: 160px; line-height: 1.6; resize: vertical; }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(138,180,255,0.15); }
+    .mode-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .mode-toggle button, .actions button { cursor: pointer; font-weight: 700; }
+    .mode-toggle button.active { border-color: var(--accent); background: rgba(138,180,255,0.16); }
+    .actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+    .primary { background: linear-gradient(135deg, #4d7fff, #6ba8ff); color: white; border: none; }
+    .ghost { background: transparent; }
+    .result-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 8px; }
+    .pillar { border: 1px solid var(--line); border-radius: 16px; padding: 14px; background: rgba(255,255,255,0.03); }
+    .pillar .name { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+    .pillar .hanja { font-size: 32px; font-weight: 800; letter-spacing: 0.04em; margin-bottom: 6px; }
+    .pillar .korean { color: var(--accent); font-size: 16px; font-weight: 700; }
+    .meta { margin-top: 16px; display: grid; gap: 10px; }
+    .meta-item { display: flex; justify-content: space-between; gap: 12px; padding: 11px 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--line); border-radius: 12px; font-size: 14px; }
+    .meta-item span:first-child { color: var(--muted); }
+    .status, .analysis-box {
+      margin-top: 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03); color: var(--muted); line-height: 1.7; white-space: pre-line;
+    }
+    .status.ok { color: #dff8e8; border-color: rgba(113,212,156,0.35); background: rgba(113,212,156,0.08); }
+    .status.bad { color: #ffe3e3; border-color: rgba(255,138,138,0.35); background: rgba(255,138,138,0.08); }
+    .small { color: var(--muted); font-size: 13px; line-height: 1.7; }
+    .inline { display: flex; align-items: center; gap: 8px; margin: 4px 0 12px; color: var(--muted); font-size: 14px; }
+    .inline input[type="checkbox"] { width: auto; transform: scale(1.15); }
+    .hidden { display: none; }
+    .combo { position: relative; }
+    .combo-input { padding-right: 42px; }
+    .combo-btn {
+      position: absolute; right: 6px; top: 6px; width: 32px; height: calc(100% - 12px);
+      border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,0.04); padding: 0;
+      font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center;
+    }
+    .combo-menu {
+      position: absolute; top: calc(100% + 6px); left: 0; right: 0; max-height: 220px; overflow: auto;
+      border: 1px solid var(--line); border-radius: 12px; background: #121a34; z-index: 20; display: none;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.28);
+    }
+    .combo.open .combo-menu { display: block; }
+    .combo-option {
+      padding: 9px 12px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 14px;
+    }
+    .combo-option:last-child { border-bottom: none; }
+    .combo-option:hover { background: rgba(138,180,255,0.12); }
+    .section-title { margin: 18px 0 10px; font-size: 16px; }
+    .copy-note { color: var(--muted); font-size: 13px; margin-top: 8px; }
+    .chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .chip { padding: 8px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; color: var(--muted); }
+    @media (max-width: 980px) {
+      .grid, .row, .row-3, .row-5, .result-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="title">
+      <h1>사주 팔자 계산기</h1>
+      <p>
+        양력 또는 음력 생년월일시를 입력하시면 년주·월주·일주·시주를 계산해드립니다.
+        음력 입력은 윤달 체크를 지원하며, 23시 자시 처리 방식도 선택하실 수 있습니다.
+      </p>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>입력</h2>
+        <div class="mode-toggle">
+          <button id="modeSolarBtn" class="active" type="button">양력 입력</button>
+          <button id="modeLunarBtn" type="button">음력 입력</button>
+        </div>
+
+        <div id="solarSection">
+          <div class="row-3">
+            <div>
+              <label for="solarYear">년</label>
+              <div class="combo" data-values="years" data-preferred="2000"><input id="solarYear" class="combo-input" type="text" inputmode="numeric" placeholder="1900~2100 선택 또는 직접 입력"><button class="combo-btn" type="button">▼</button><div class="combo-menu"></div></div>
+            </div>
+            <div>
+              <label for="solarMonth">월</label>
+              <div class="combo" data-values="months"><input id="solarMonth" class="combo-input" type="text" inputmode="numeric" placeholder="1~12 선택 또는 직접 입력"><button class="combo-btn" type="button">▼</button><div class="combo-menu"></div></div>
+            </div>
+            <div>
+              <label for="solarDay">일</label>
+              <div class="combo" data-values="days31"><input id="solarDay" class="combo-input" type="text" inputmode="numeric" placeholder="1~31 선택 또는 직접 입력"><button class="combo-btn" type="button">▼</button><div class="combo-menu"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="lunarSection" class="hidden">
+          <div class="row-3">
+            <div>
+              <label for="lunarYear">음력 년</label>
+              <div class="combo" data-values="years" data-preferred="2000"><input id="lunarYear" class="combo-input" type="text" inputmode="numeric" placeholder="1900~2100 선택 또는 직접 입력"><button class="combo-btn" type="button">▼</button><div class="combo-menu"></div></div>
+            </div>
+            <div>
+              <label for="lunarMonth">음력 월</label>
+              <div class="combo" data-values="months"><input id="lunarMonth" class="combo-input" type="text" inputmode="numeric" placeholder="1~12 선택 또는 직접 입력"><button class="combo-btn" type="button">▼</button><div class="combo-menu"></div></div>
+            </div>
+            <div>
+              <label for="lunarDay">음력 일</label>
+              <div class="combo" data-values="days30"><input id="lunarDay" class="combo-input" type="text" inputmode="numeric" placeholder="1~30 선택 또는 직접 입력"><button class="combo-btn" type="button">▼</button><div class="combo-menu"></div></div>
+            </div>
+          </div>
+          <label class="inline"><input id="isLeapMonth" type="checkbox" />윤달</label>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="hour">시간 (24시간)</label>
+            <div class="combo" data-values="hours"><input id="hour" class="combo-input" type="text" inputmode="numeric" placeholder="0~23 선택 또는 직접 입력"><button class="combo-btn" type="button">▼</button><div class="combo-menu"></div></div>
+          </div>
+          <div>
+            <label for="minute">분</label>
+            <div class="combo" data-values="minutes"><input id="minute" class="combo-input" type="text" inputmode="numeric" placeholder="0~59 선택 또는 직접 입력"><button class="combo-btn" type="button">▼</button><div class="combo-menu"></div></div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="sect">자시 처리 방식</label>
+            <select id="sect">
+              <option>유파 1: 23:00~23:59를 다음날로 계산</option>
+              <option value="2">유파 2: 23:00~23:59를 당일로 계산</option>
+            </select>
+          </div>
+          <div>
+            <label for="gender">성별 (확장 대비)</label>
+            <select id="gender">
+              <option>남자</option>
+              <option>여자</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="calcBtn" class="primary" type="button">계산</button>
+                  </div>
+
+        <div class="status" id="status">입력 후 계산 버튼을 누르시면 결과가 표시됩니다.</div>
+        <p class="small">참고: 현재 계산 엔진은 외부 라이브러리를 불러오는 방식이라 인터넷 연결이 필요합니다. 이번 수정에는 직접입력+드롭다운 겸용 입력, 규칙형 기본 풀이, AI 질문용 프롬프트 자동 생성 기능을 포함했습니다.</p>
+      </div>
+
+      <div class="card">
+        <h2>결과</h2>
+        <div class="result-grid">
+          <div class="pillar"><div class="name">년주</div><div class="hanja" id="yearPillar">-</div><div class="korean" id="yearPillarKo">-</div></div>
+          <div class="pillar"><div class="name">월주</div><div class="hanja" id="monthPillar">-</div><div class="korean" id="monthPillarKo">-</div></div>
+          <div class="pillar"><div class="name">일주</div><div class="hanja" id="dayPillar">-</div><div class="korean" id="dayPillarKo">-</div></div>
+          <div class="pillar"><div class="name">시주</div><div class="hanja" id="timePillar">-</div><div class="korean" id="timePillarKo">-</div></div>
+        </div>
+
+        <div class="meta">
+          <div class="meta-item"><span>양력 기준</span><span id="solarText">-</span></div>
+          <div class="meta-item"><span>음력 기준</span><span id="lunarText">-</span></div>
+          <div class="meta-item"><span>절기 정보</span><span id="jieQiText">-</span></div>
+          <div class="meta-item"><span>자시 처리</span><span id="sectText">-</span></div>
+        </div>
+
+        <h3 class="section-title">기본 풀이</h3>
+        <div class="analysis-box" id="analysisText">계산 후 간단한 규칙형 풀이가 여기에 표시됩니다.</div>
+        <div class="chip-row" id="elementChips"></div>
+
+        <h3 class="section-title">AI 질문용 프롬프트</h3>
+        <textarea id="promptText" readonly placeholder="계산 후 복사 가능한 프롬프트가 여기에 생성됩니다."></textarea>
+        <div class="actions">
+          <button id="copyPromptBtn" class="ghost" type="button">프롬프트 복사</button>
+        </div>
+        <div class="copy-note">기본 풀이는 규칙형 요약입니다. 더 깊은 해석이 필요하시면 생성된 프롬프트를 복사해 AI에게 바로 질문하시면 됩니다.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const stemsKo = {'甲':'갑','乙':'을','丙':'병','丁':'정','戊':'무','己':'기','庚':'경','辛':'신','壬':'임','癸':'계'};
+    const branchesKo = {'子':'자','丑':'축','寅':'인','卯':'묘','辰':'진','巳':'사','午':'오','未':'미','申':'신','酉':'유','戌':'술','亥':'해'};
+    const stemElement = {'甲':'목','乙':'목','丙':'화','丁':'화','戊':'토','己':'토','庚':'금','辛':'금','壬':'수','癸':'수'};
+    const branchElement = {'子':'수','丑':'토','寅':'목','卯':'목','辰':'토','巳':'화','午':'화','未':'토','申':'금','酉':'금','戌':'토','亥':'수'};
+    const elementAdvice = {
+      '목':'성장성, 기획력, 확장 성향이 드러납니다.',
+      '화':'표현력, 추진력, 열정이 강하게 작동하기 쉽습니다.',
+      '토':'안정성, 현실감, 관리 성향이 강해질 수 있습니다.',
+      '금':'판단력, 정리력, 원칙성이 두드러질 수 있습니다.',
+      '수':'유연성, 사고력, 적응력이 잘 살아날 수 있습니다.'
+    };
+    const values = {
+      years: Array.from({length: 201}, (_, i) => String(1900 + i)),
+      months: Array.from({length: 12}, (_, i) => String(i + 1)),
+      days31: Array.from({length: 31}, (_, i) => String(i + 1)),
+      days30: Array.from({length: 30}, (_, i) => String(i + 1)),
+      hours: Array.from({length: 24}, (_, i) => String(i)),
+      minutes: Array.from({length: 60}, (_, i) => String(i))
+    };
+
+    let inputMode = 'solar';
+    let lastResult = null;
+    const $ = (id) => document.getElementById(id);
+
+    function pillarToKo(pillar) {
+      if (!pillar || pillar.length < 2) return '-';
+      const a = pillar.charAt(0), b = pillar.charAt(1);
+      return `${stemsKo[a] || a}${branchesKo[b] || b}`;
+    }
+    function format2(n) { return String(n).padStart(2, '0'); }
+    function parseIntStrict(value, label) {
+      const text = String(value ?? '').trim();
+      if (!/^-?\d+$/.test(text)) throw new Error(`${label}에는 숫자만 입력해 주세요.`);
+      return Number(text);
+    }
+    function getMaxDay(year, month) { return new Date(year, month, 0).getDate(); }
+    function setMode(mode) {
+      inputMode = mode;
+      $('solarSection').classList.toggle('hidden', mode !== 'solar');
+      $('lunarSection').classList.toggle('hidden', mode !== 'lunar');
+      $('modeSolarBtn').classList.toggle('active', mode === 'solar');
+      $('modeLunarBtn').classList.toggle('active', mode === 'lunar');
+    }
+    function setStatus(message, type = '') {
+      const el = $('status');
+      el.textContent = message;
+      el.className = `status ${type}`.trim();
+    }
+
+    function initCombos() {
+      document.querySelectorAll('.combo').forEach((combo) => {
+        const input = combo.querySelector('input');
+        const button = combo.querySelector('.combo-btn');
+        const menu = combo.querySelector('.combo-menu');
+        const key = combo.dataset.values;
+        const options = values[key] || [];
+        const preferredValue = combo.dataset.preferred || '';
+
+        function render(filter = '') {
+          const normalized = String(filter).trim();
+          const list = normalized
+            ? options.filter(v => v.startsWith(normalized)).slice(0, 200)
+            : options.slice(0, 200);
+          menu.innerHTML = list.map(v => `<div class="combo-option" data-value="${v}">${v}</div>`).join('');
+        }
+
+        function highlightPreferred() {
+          if (!preferredValue) return;
+          const opt = menu.querySelector(`.combo-option[data-value="${preferredValue}"]`);
+          if (opt) opt.scrollIntoView({ block: 'center' });
+        }
+
+        function openMenu() {
+          document.querySelectorAll('.combo.open').forEach(el => { if (el !== combo) el.classList.remove('open'); });
+          render(input.value);
+          combo.classList.add('open');
+          requestAnimationFrame(() => {
+            if (!String(input.value).trim()) highlightPreferred();
+          });
+        }
+
+        function closeMenu() { combo.classList.remove('open'); }
+
+        button.addEventListener('click', (e) => {
+          e.stopPropagation();
+          combo.classList.contains('open') ? closeMenu() : openMenu();
+          input.focus();
+        });
+
+        input.addEventListener('focus', openMenu);
+        input.addEventListener('click', openMenu);
+        input.addEventListener('input', () => render(input.value));
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            openMenu();
+            const first = menu.querySelector('.combo-option');
+            if (first) first.scrollIntoView({ block: 'nearest' });
+          }
+          if (e.key === 'Escape') closeMenu();
+        });
+
+        menu.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          const opt = e.target.closest('.combo-option');
+          if (!opt) return;
+          input.value = opt.dataset.value;
+          closeMenu();
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+          input.focus();
+        });
+      });
+
+      document.addEventListener('mousedown', (e) => {
+        document.querySelectorAll('.combo.open').forEach(combo => {
+          if (!combo.contains(e.target)) combo.classList.remove('open');
+        });
+      });
+    }
+
+    function renderResult(solar, lunar, eightChar, sect) {
+      $('yearPillar').textContent = eightChar.getYear();
+      $('monthPillar').textContent = eightChar.getMonth();
+      $('dayPillar').textContent = eightChar.getDay();
+      $('timePillar').textContent = eightChar.getTime();
+      $('yearPillarKo').textContent = pillarToKo(eightChar.getYear());
+      $('monthPillarKo').textContent = pillarToKo(eightChar.getMonth());
+      $('dayPillarKo').textContent = pillarToKo(eightChar.getDay());
+      $('timePillarKo').textContent = pillarToKo(eightChar.getTime());
+      $('solarText').textContent = `${solar.getYear()}-${format2(solar.getMonth())}-${format2(solar.getDay())} ${format2(solar.getHour())}:${format2(solar.getMinute())}`;
+      const lunarMonth = lunar.getMonth();
+      const lunarMonthText = lunarMonth < 0 ? `윤${Math.abs(lunarMonth)}` : `${lunarMonth}`;
+      $('lunarText').textContent = `${lunar.getYear()}년 ${lunarMonthText}월 ${lunar.getDay()}일`;
+      let currentJie = '-';
+      try { currentJie = lunar.getCurrentJieQi ? (lunar.getCurrentJieQi() || '-') : '-'; } catch (e) { currentJie = '-'; }
+      $('jieQiText').textContent = currentJie;
+      $('sectText').textContent = sect === 1 ? '유파 1 · 23:00~23:59를 다음날로 계산' : '유파 2 · 23:00~23:59를 당일로 계산';
+    }
+
+    function analyzePillars(result) {
+      const pillars = [result.year, result.month, result.day, result.time];
+      const counts = {목:0, 화:0, 토:0, 금:0, 수:0};
+      pillars.forEach(p => {
+        counts[stemElement[p[0]]] += 1;
+        counts[branchElement[p[1]]] += 1;
+      });
+      const dayStem = result.day[0];
+      const dayElement = stemElement[dayStem];
+      const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+      const strong = sorted[0][0], weak = sorted[sorted.length-1][0];
+      const seasonBranch = result.month[1];
+      const seasonElement = branchElement[seasonBranch];
+      const text = [
+        `일간은 ${pillarToKo(result.day).slice(0,1)}${pillarToKo(result.day).slice(1)} 중 핵심 기준이 되는 ${stemsKo[dayStem]}${dayElement}입니다.`,
+        `오행 분포는 목 ${counts.목}, 화 ${counts.화}, 토 ${counts.토}, 금 ${counts.금}, 수 ${counts.수}로 보입니다.`,
+        `${strong} 기운이 상대적으로 강하고 ${weak} 기운은 상대적으로 약한 편으로 읽을 수 있습니다.`,
+        `월지의 계절감은 ${branchesKo[seasonBranch]}(${seasonElement})로 잡혀, 사회적 활동이나 환경의 영향은 ${seasonElement} 성향이 비교적 강조될 수 있습니다.`,
+        `기본 해석으로는 ${elementAdvice[dayElement]} 강한 쪽의 장점을 살리되 부족한 ${weak} 성향을 생활 습관·관계 방식·일 선택에서 보완해 보시는 것이 좋습니다.`
+      ].join('\n');
+      $('analysisText').textContent = text;
+      $('elementChips').innerHTML = Object.entries(counts).map(([k,v]) => `<div class="chip">${k} ${v}</div>`).join('');
+      return {counts, dayElement, strong, weak};
+    }
+
+    function makePrompt() {
+      if (!lastResult) {
+        $('promptText').value = '먼저 사주를 계산해 주세요.';
+        return;
+      }
+      const prompt = [
+        `다음 사주를 전통 명리학 관점에서 간결하고 논리적으로 분석해 주세요.`,
+        `사주: ${lastResult.year} / ${lastResult.month} / ${lastResult.day} / ${lastResult.time}`,
+        `양력 기준: ${lastResult.solarText}`,
+        `음력 기준: ${lastResult.lunarText}`,
+        `자시 처리 방식: ${lastResult.sectText}`,
+        `아래 항목만 순서대로 답해 주세요.`,
+        `1. 일간과 기본 성향`,
+        `2. 오행 균형과 강약`,
+        `3. 직업 및 재물 성향`,
+        `4. 인간관계 성향`,
+        `5. 주의할 점`,
+        `6. 한 줄 요약`
+      ].join('\n');
+      $('promptText').value = prompt;
+    }
+
+    async function copyPrompt() {
+      const text = $('promptText').value.trim();
+      if (!text) {
+        setStatus('복사할 프롬프트가 없습니다. 먼저 계산을 진행해 주세요.', 'bad');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        setStatus('프롬프트를 클립보드에 복사했습니다.', 'ok');
+      } catch (e) {
+        setStatus('브라우저에서 클립보드 복사를 허용하지 않았습니다. 프롬프트 영역의 내용을 직접 복사해 주세요.', 'bad');
+      }
+    }
+
+    function calculate() {
+      try {
+        if (typeof Solar === 'undefined' || typeof Lunar === 'undefined') {
+          throw new Error('lunar-javascript 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.');
+        }
+        const hour = parseIntStrict($('hour').value, '시간');
+        const minute = parseIntStrict($('minute').value, '분');
+        const sect = Number($('sect').value);
+        if (hour < 0 || hour > 23) throw new Error('시간은 0~23 사이여야 합니다.');
+        if (minute < 0 || minute > 59) throw new Error('분은 0~59 사이여야 합니다.');
+
+        let solar, lunar;
+        if (inputMode === 'solar') {
+          const y = parseIntStrict($('solarYear').value, '년');
+          const m = parseIntStrict($('solarMonth').value, '월');
+          const d = parseIntStrict($('solarDay').value, '일');
+          if (m < 1 || m > 12) throw new Error('월은 1~12 사이여야 합니다.');
+          const maxDay = getMaxDay(y, m);
+          if (d < 1 || d > maxDay) throw new Error(`${y}년 ${m}월의 일자는 1~${maxDay} 사이여야 합니다.`);
+          solar = Solar.fromYmdHms(y, m, d, hour, minute, 0);
+          lunar = solar.getLunar();
+        } else {
+          const y = parseIntStrict($('lunarYear').value, '음력 년');
+          let m = parseIntStrict($('lunarMonth').value, '음력 월');
+          const d = parseIntStrict($('lunarDay').value, '음력 일');
+          if (m < 1 || m > 12) throw new Error('음력 월은 1~12 사이여야 합니다.');
+          if (d < 1 || d > 30) throw new Error('음력 일은 1~30 사이여야 합니다.');
+          if ($('isLeapMonth').checked) m = -Math.abs(m);
+          lunar = Lunar.fromYmdHms(y, m, d, hour, minute, 0);
+          solar = lunar.getSolar();
+        }
+
+        const eightChar = lunar.getEightChar();
+        if (eightChar && typeof eightChar.setSect === 'function') eightChar.setSect(sect);
+        renderResult(solar, lunar, eightChar, sect);
+        analyzePillars({year:eightChar.getYear(), month:eightChar.getMonth(), day:eightChar.getDay(), time:eightChar.getTime()});
+
+        lastResult = {
+          year: eightChar.getYear(), month: eightChar.getMonth(), day: eightChar.getDay(), time: eightChar.getTime(),
+          solarText: `${solar.getYear()}-${format2(solar.getMonth())}-${format2(solar.getDay())} ${format2(solar.getHour())}:${format2(solar.getMinute())}`,
+          lunarText: `${lunar.getYear()}년 ${(lunar.getMonth() < 0 ? `윤${Math.abs(lunar.getMonth())}` : lunar.getMonth())}월 ${lunar.getDay()}일`,
+          sectText: sect === 1 ? '유파 1 · 23:00~23:59를 다음날로 계산' : '유파 2 · 23:00~23:59를 당일로 계산'
+        };
+        makePrompt();
+        setStatus(`계산이 완료되었습니다.\n사주: ${lastResult.year} / ${lastResult.month} / ${lastResult.day} / ${lastResult.time}`, 'ok');
+      } catch (err) {
+        setStatus(`계산 실패: ${err.message}`, 'bad');
+      }
+    }
+
+    $('modeSolarBtn').addEventListener('click', () => setMode('solar'));
+    $('modeLunarBtn').addEventListener('click', () => setMode('lunar'));
+    $('calcBtn').addEventListener('click', calculate);
+    $('copyPromptBtn').addEventListener('click', copyPrompt);
+
+    window.addEventListener('load', () => {
+      initCombos();
+      setMode('solar');
+      setStatus('준비가 완료되었습니다. 원하시는 날짜를 입력하신 뒤 계산 버튼을 눌러 주세요.');
+    });
+  </script>
+</body>
+</html>
