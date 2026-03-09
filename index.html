@@ -164,12 +164,21 @@
           </div>
         </div>
 
-        <div>
-          <label for="sect">자시 처리 방식</label>
-          <select id="sect">
-            <option value="1">23:00~23:59를 다음날로 계산</option>
-            <option value="2">23:00~23:59를 당일로 계산</option>
-          </select>
+        <div class="row">
+          <div>
+            <label for="sect">자시 처리 방식</label>
+            <select id="sect">
+              <option value="1">23:00~23:59를 다음날로 계산</option>
+              <option value="2">23:00~23:59를 당일로 계산</option>
+            </select>
+          </div>
+          <div>
+            <label>성별</label>
+            <div class="mode-toggle" id="genderToggle">
+              <button id="genderMaleBtn" class="active" type="button">남성</button>
+              <button id="genderFemaleBtn" type="button">여성</button>
+            </div>
+          </div>
         </div>
 
         <div class="actions">
@@ -232,6 +241,7 @@
     };
 
     let inputMode = 'solar';
+    let gender = 'male';
     let lastResult = null;
     const $ = (id) => document.getElementById(id);
 
@@ -393,6 +403,7 @@
 `양력 기준: ${lastResult.solarText}`,
 `음력 기준: ${lastResult.lunarText}`,
 `자시 처리 방식: ${lastResult.sectText}`,
+`성별: ${lastResult.genderText}`,
 
 `[내부 분석 순서 — 1단계부터 7단계까지 순서대로 내부적으로 판단하세요. 단계별 전체 추론 과정은 출력하지 말고, 판단 결과와 핵심 근거만 최종 출력에 반영하세요]`,
 
@@ -501,7 +512,8 @@ $('promptText').value = prompt;
           year: eightChar.getYear(), month: eightChar.getMonth(), day: eightChar.getDay(), time: eightChar.getTime(),
           solarText: `${solar.getYear()}-${format2(solar.getMonth())}-${format2(solar.getDay())} ${format2(solar.getHour())}:${format2(solar.getMinute())}`,
           lunarText: `${lunar.getYear()}년 ${(lunar.getMonth() < 0 ? `윤${Math.abs(lunar.getMonth())}` : lunar.getMonth())}월 ${lunar.getDay()}일`,
-          sectText: sect === 1 ? '23:00~23:59를 다음날로 계산' : '23:00~23:59를 당일로 계산'
+          sectText: sect === 1 ? '23:00~23:59를 다음날로 계산' : '23:00~23:59를 당일로 계산',
+          genderText: gender === 'male' ? '남성' : '여성'
         };
         makePrompt();
         setStatus(`계산이 완료되었습니다.\n사주: ${lastResult.year} / ${lastResult.month} / ${lastResult.day} / ${lastResult.time}`, 'ok');
@@ -514,6 +526,19 @@ $('promptText').value = prompt;
     $('modeLunarBtn').addEventListener('click', () => setMode('lunar'));
     $('calcBtn').addEventListener('click', calculate);
     $('copyPromptBtn').addEventListener('click', copyPrompt);
+
+    $('genderMaleBtn').addEventListener('click', () => {
+      gender = 'male';
+      $('genderMaleBtn').classList.add('active');
+      $('genderFemaleBtn').classList.remove('active');
+      if (lastResult) { lastResult.genderText = '남성'; makePrompt(); }
+    });
+    $('genderFemaleBtn').addEventListener('click', () => {
+      gender = 'female';
+      $('genderFemaleBtn').classList.add('active');
+      $('genderMaleBtn').classList.remove('active');
+      if (lastResult) { lastResult.genderText = '여성'; makePrompt(); }
+    });
 
     window.addEventListener('load', () => {
       initCombos();
