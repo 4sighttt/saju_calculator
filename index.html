@@ -373,12 +373,13 @@
       const strong = sorted[0][0], weak = sorted[sorted.length-1][0];
       const seasonBranch = result.month[1];
       const seasonElement = branchElement[seasonBranch];
+      const dayKo = `${stemsKo[dayStem]}${dayElement}`;
       const text = [
-        `일간은 ${pillarToKo(result.day).slice(0,1)}${pillarToKo(result.day).slice(1)} 중 핵심 기준이 되는 ${stemsKo[dayStem]}${dayElement}입니다.`,
-        `오행 분포는 목 ${counts.목}, 화 ${counts.화}, 토 ${counts.토}, 금 ${counts.금}, 수 ${counts.수}로 보입니다.`,
-        `${strong} 기운이 상대적으로 강하고 ${weak} 기운은 상대적으로 약한 편으로 읽을 수 있습니다.`,
-        `월지의 계절감은 ${branchesKo[seasonBranch]}(${seasonElement})로 잡혀, 사회적 활동이나 환경의 영향은 ${seasonElement} 성향이 비교적 강조될 수 있습니다.`,
-        `기본 해석으로는 ${elementAdvice[dayElement]} 강한 쪽의 장점을 살리되 부족한 ${weak} 성향을 생활 습관·관계 방식·일 선택에서 보완해 보시는 것이 좋습니다.`
+        `일간은 ${dayKo}으로, 사주 해석에서 본인 성향을 보는 핵심 기준입니다.`,
+        `월령은 ${branchesKo[seasonBranch]}(${seasonElement})로, 전체 분위기에서는 ${seasonElement} 기운이 비교적 두드러지는 시기입니다.`,
+        `현재 기본 풀이는 천간과 지지의 겉글자 기준으로 정리한 간단 요약이며, 오행은 ${strong} 쪽이 비교적 두드러지고 ${weak} 쪽은 상대적으로 약하게 보일 수 있습니다.`,
+        `따라서 기본 성향은 ${elementAdvice[dayElement]}`,
+        `정밀 해석에서는 지장간, 월령, 통근, 합충까지 함께 봐야 하므로 아래 AI 질문용 프롬프트로 추가 분석을 진행하시는 것이 더 정확합니다.`
       ].join('\n');
       $('analysisText').textContent = text;
       $('elementChips').innerHTML = Object.entries(counts).map(([k,v]) => `<div class="chip">${k} ${v}</div>`).join('');
