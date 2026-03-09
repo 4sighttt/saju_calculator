@@ -164,21 +164,12 @@
           </div>
         </div>
 
-        <div class="row">
-          <div>
-            <label for="sect">자시 처리 방식</label>
-            <select id="sect">
-              <option>유파 1: 23:00~23:59를 다음날로 계산</option>
-              <option value="2">유파 2: 23:00~23:59를 당일로 계산</option>
-            </select>
-          </div>
-          <div>
-            <label for="gender">성별 (확장 대비)</label>
-            <select id="gender">
-              <option>남자</option>
-              <option>여자</option>
-            </select>
-          </div>
+        <div>
+          <label for="sect">자시 처리 방식</label>
+          <select id="sect">
+            <option value="1">23:00~23:59를 다음날로 계산</option>
+            <option value="2">23:00~23:59를 당일로 계산</option>
+          </select>
         </div>
 
         <div class="actions">
@@ -292,12 +283,12 @@
           if (opt) opt.scrollIntoView({ block: 'center' });
         }
 
-        function openMenu() {
+        function openMenu(filterValue = '') {
           document.querySelectorAll('.combo.open').forEach(el => { if (el !== combo) el.classList.remove('open'); });
-          render(input.value);
+          render(filterValue);
           combo.classList.add('open');
           requestAnimationFrame(() => {
-            if (!String(input.value).trim()) highlightPreferred();
+            if (!String(filterValue).trim()) highlightPreferred();
           });
         }
 
@@ -305,17 +296,17 @@
 
         button.addEventListener('click', (e) => {
           e.stopPropagation();
-          combo.classList.contains('open') ? closeMenu() : openMenu();
+          combo.classList.contains('open') ? closeMenu() : openMenu('');
           input.focus();
         });
 
-        input.addEventListener('focus', openMenu);
-        input.addEventListener('click', openMenu);
+        input.addEventListener('focus', () => openMenu(''));
+        input.addEventListener('click', () => openMenu(''));
         input.addEventListener('input', () => render(input.value));
         input.addEventListener('keydown', (e) => {
           if (e.key === 'ArrowDown') {
             e.preventDefault();
-            openMenu();
+            openMenu('');
             const first = menu.querySelector('.combo-option');
             if (first) first.scrollIntoView({ block: 'nearest' });
           }
@@ -356,7 +347,7 @@
       let currentJie = '-';
       try { currentJie = lunar.getCurrentJieQi ? (lunar.getCurrentJieQi() || '-') : '-'; } catch (e) { currentJie = '-'; }
       $('jieQiText').textContent = currentJie;
-      $('sectText').textContent = sect === 1 ? '유파 1 · 23:00~23:59를 다음날로 계산' : '유파 2 · 23:00~23:59를 당일로 계산';
+      $('sectText').textContent = sect === 1 ? '23:00~23:59를 다음날로 계산' : '23:00~23:59를 당일로 계산';
     }
 
     function analyzePillars(result) {
@@ -390,11 +381,12 @@
         return;
       }
       const prompt = [
-        `다음 사주를 전통 명리학 관점에서 간결하고 논리적으로 분석해 주세요.`,
+        `다음 사주를 전통 명리학 관점에서 초보자도 이해할 수 있도록 쉽고 자세하게 설명해 주세요.`,
         `사주: ${lastResult.year} / ${lastResult.month} / ${lastResult.day} / ${lastResult.time}`,
         `양력 기준: ${lastResult.solarText}`,
         `음력 기준: ${lastResult.lunarText}`,
         `자시 처리 방식: ${lastResult.sectText}`,
+        `가능하면 용어를 풀어서 쉽게 설명하고, 초보자도 이해할 수 있게 자세히 써 주세요.`,
         `아래 항목만 순서대로 답해 주세요.`,
         `1. 일간과 기본 성향`,
         `2. 오행 균형과 강약`,
@@ -461,7 +453,7 @@
           year: eightChar.getYear(), month: eightChar.getMonth(), day: eightChar.getDay(), time: eightChar.getTime(),
           solarText: `${solar.getYear()}-${format2(solar.getMonth())}-${format2(solar.getDay())} ${format2(solar.getHour())}:${format2(solar.getMinute())}`,
           lunarText: `${lunar.getYear()}년 ${(lunar.getMonth() < 0 ? `윤${Math.abs(lunar.getMonth())}` : lunar.getMonth())}월 ${lunar.getDay()}일`,
-          sectText: sect === 1 ? '유파 1 · 23:00~23:59를 다음날로 계산' : '유파 2 · 23:00~23:59를 당일로 계산'
+          sectText: sect === 1 ? '23:00~23:59를 다음날로 계산' : '23:00~23:59를 당일로 계산'
         };
         makePrompt();
         setStatus(`계산이 완료되었습니다.\n사주: ${lastResult.year} / ${lastResult.month} / ${lastResult.day} / ${lastResult.time}`, 'ok');
